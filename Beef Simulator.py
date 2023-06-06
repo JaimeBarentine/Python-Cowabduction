@@ -1,14 +1,17 @@
-""" Beef Simulatord
+""" Beef Simulator
 
         please read this from top to bottom, skipping around may prove confusing
 
 
     * play as ufo, move around above planet surface
     * Use tractor beam to abduct cows for points
-    * tractor beam takes a full second to pull up cows
+    * tractor beam pulls up cows gradually, using momentum
     * army tanks shoot at you, you lose health if hit
     * use secondary button to fire back at them for (less) points
     * if you accidentally hit a cow, you lose health
+    * if you accidentally abduct an army tank, you lose health
+    * abducting cows also heals you a small amount
+    * health counts down instead of subtracting all at once, so you always have a chance to abduct a cow before it hits 0
     
 
     
@@ -26,10 +29,10 @@ pygame.init()
 # fuel - health in the top left, counts down to master health 1 by 1, game ends if it reaches 0. Doesn't count 1 by 1 if fuel is increased
 # level - used for managing what spawns. Level 1: just cow Level 2: just enemy Level 3: cow and enemy Level: 4 two cows and two enemies
 # masterFuel - tracks damage taken. If masterFuel is 1000 and player takes 250 damage, masterFuel is now 750, and fuel will count down from 1000 until it reaches 750
-# pause - made the name before the function, it's actually a bool that resets the cows and enemies
+# reset - bool that resets the cows and enemies
 # beam - bool that tells classes if space is being pressed without having to apply key input to every class
 # speed - controls how fast cows and enemies move left and right, increases after score is 2000 and increases more every 1000 points infinitely
-d = {'status' : "Press space to abduct cows", 'score' : 0, 'fuel' : 1000, 'level' : 1, 'masterFuel' : 1000, 'pause' : False, 'beam' : False, 'speed' : 5}
+d = {'status' : "Press space to abduct cows", 'score' : 0, 'fuel' : 1000, 'level' : 1, 'masterFuel' : 1000, 'reset' : False, 'beam' : False, 'speed' : 5}
 
 # colours for future reference
 WHITE = (255, 255, 255)
@@ -40,11 +43,11 @@ BLUE = (0, 0, 255)
 
 
 
-# everything from this 5 layer # wall is directly related to scene engine
+# everything from this 5 layer '#' wall is directly related to scene engine
 # for a general break down, it defines two custom sprite classes with physics that all classes/objects in the game will use
-# a scene engine controlling the screen and refreshing the sprites
+# a scene engine controlling the screen and refreshing the sprites every frame
 # some various ui functions such as a label, button, multilabel, and slider, which put text on screen
-# skip to next # wall please
+# skip to next '#' wall please
 ##########################################################################
 ##########################################################################
 ##########################################################################
@@ -733,8 +736,7 @@ class MultiLabel(pygame.sprite.Sprite):
 ############################################################################
 ############################################################################
 ############################################################################
-# everything from this point forward is code I have written
-# and has to do with the game
+# everything from this point forward has to do with the game logic
         
 
 # this appears briefly to refresh the black behind the text since I couldn't figure out the ui system above in time to complete this
@@ -771,7 +773,7 @@ class Bullet(spriteEngine.SuperSprite):
 
     def checkEvents(self):
         #resets
-        if d['pause']:
+        if d['reset']:
             self.shooting = False
         
         if self.shooting :
@@ -1335,8 +1337,8 @@ class Game(sceneEngine.Scene):
 
         # resets everything after player takes damage
         # extra rules written for different levels
-        if d['pause']:
-            d['pause'] = False
+        if d['reset']:
+            d['reset'] = False
 
             self.armedship.reset()
             self.armedship2.reset()
@@ -1383,7 +1385,7 @@ class Game(sceneEngine.Scene):
             d['masterFuel'] = 0
 
         if d['fuel'] < 1:
-            d['pause'] = True
+            d['reset'] = True
         
 
         if d['fuel'] < 1:
@@ -1423,17 +1425,17 @@ class Game(sceneEngine.Scene):
 
         else:
 
-            # when ufo hit by enemy bullet1, take damage and despawn {pause} all objects
+            # when ufo hit by enemy bullet1, take damage and despawn {reset} all objects
             if self.ufo.collidesWith(self.bullet) and self.bullet.shooting == True:
                 d['masterFuel'] -= 250
-                d['pause'] = True
+                d['reset'] = True
                 self.bullet.shooting = False
                 d['status'] = "You were shot"
 
             # when ufo hit by bullet2, same basic function as bullet1
             if self.ufo.collidesWith(self.bullet2) and self.bullet2.shooting == True:
                 d['masterFuel'] -= 250
-                d['pause'] = True
+                d['reset'] = True
                 self.bullet2.shooting = False
                 d['status'] = "You were shot"
 
@@ -1484,7 +1486,7 @@ class Game(sceneEngine.Scene):
             # when bomb hits cow, ufo takes damage and resets all objects
             if self.bomb.collidesWith(self.cow) and self.bomb.shooting:
 
-                d['pause'] = True
+                d['reset'] = True
                 self.bomb.shooting = False
                 d['masterFuel'] -= 250
                 d['status'] = "Don't shoot cows!"
@@ -1492,7 +1494,7 @@ class Game(sceneEngine.Scene):
             # when bomb hits cow2, do same as when it hits cow1
             if self.bomb.collidesWith(self.cow2) and self.bomb.shooting:
 
-                d['pause'] = True
+                d['reset'] = True
                 self.bomb.shooting = False
                 d['masterFuel'] -= 250
                 d['status'] = "Don't shoot cows!"
@@ -1514,7 +1516,7 @@ class Game(sceneEngine.Scene):
             # when ufo abducts enemy, hurt player
             if self.ufo.collidesWith(self.armedship):
                 
-                d['pause'] = True
+                d['reset'] = True
                 d['masterFuel'] -= 250
                 d['status'] = "Don't pick up military vehicles!"
 
@@ -1522,7 +1524,7 @@ class Game(sceneEngine.Scene):
             # when ufo hits enemy2, hurt player
             if self.ufo.collidesWith(self.armedship2):
                 
-                d['pause'] = True
+                d['reset'] = True
                 d['masterFuel'] -= 250
                 d['status'] = "Don't pick up military vehicles!"
 
